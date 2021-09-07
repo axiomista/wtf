@@ -49,6 +49,7 @@ import (
 	"github.com/wtfutil/wtf/modules/mercurial"
 	"github.com/wtfutil/wtf/modules/nbascore"
 	"github.com/wtfutil/wtf/modules/newrelic"
+	"github.com/wtfutil/wtf/modules/oura"
 	"github.com/wtfutil/wtf/modules/opsgenie"
 	"github.com/wtfutil/wtf/modules/pagerduty"
 	"github.com/wtfutil/wtf/modules/pihole"
@@ -247,6 +248,9 @@ func MakeWidget(
 	case "opsgenie":
 		settings := opsgenie.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = opsgenie.NewWidget(tviewApp, settings)
+	case "oura":
+			settings := oura.NewSettingsFromYAML(moduleName, moduleConfig, config)
+			widget = oura.NewWidget(tviewApp, settings)
 	case "pagerduty":
 		settings := pagerduty.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = pagerduty.NewWidget(tviewApp, settings)
