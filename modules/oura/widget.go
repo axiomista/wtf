@@ -10,14 +10,16 @@ import (
 	"time"
 
 	"github.com/rivo/tview"
+	"github.com/wtfutil/wtf/utils"
 	"github.com/wtfutil/wtf/view"
 )
 
 // Widget is the container for your module's data
 type Widget struct {
 	view.TextWidget
-
-	settings *Settings
+	pageTypes []string
+	idx       int
+	settings  *Settings
 }
 
 const (
@@ -27,20 +29,26 @@ const (
 )
 
 var (
-	accessToken string
+	accessToken = "" // Required config value
+	dayOffset   = -3
 	client      = http.DefaultClient
-	start       = time.Now().AddDate(0, 0, -3).Format("2006-01-02") // Two days ago
-	end         = time.Now().AddDate(0, 0, 0).Format("2006-01-02")  // Today
 )
 
 // NewWidget creates and returns an instance of Widget
-func NewWidget(tviewApp *tview.Application, settings *Settings) *Widget {
+func NewWidget(tviewApp *tview.Application, pages *tview.Pages, settings *Settings) *Widget {
 	widget := Widget{
-		TextWidget: view.NewTextWidget(tviewApp, nil, settings.common),
+		TextWidget: view.NewTextWidget(tviewApp, pages, settings.common),
 		settings:   settings,
+		// pageTypes: []string{"sleep", "activity", "readiness", "bedtime"},
+		pageTypes: []string{"sleep", "balderdash"},
 	}
 	accessToken = widget.settings.accessToken
+	dayOffset = widget.settings.days * -1
+
+	widget.initializeKeyboardControls()
 	widget.View.SetScrollable(true)
+	widget.View.SetWrap(true)
+	widget.View.SetWordWrap(true)
 	return &widget
 }
 
@@ -49,6 +57,7 @@ func NewWidget(tviewApp *tview.Application, settings *Settings) *Widget {
 // Refresh updates the onscreen contents of the widget
 func (widget *Widget) Refresh() {
 	accessToken = widget.settings.accessToken
+	dayOffset = widget.settings.days * -1
 	// The last call should always be to the display function
 	widget.display()
 }
@@ -64,18 +73,43 @@ func (widget *Widget) display() {
 func (widget *Widget) content() string {
 	userInfo, err := getUserInfo()
 	if err != nil {
-		return "Could not get Oura data"
+		msg := fmt.Sprintf("Could not get Oura data for %s", widget.settings.myName)
+		return fmt.Sprintf("\n\n%s", utils.CenterText(msg, 16))
 	}
 
+	_, _, width, _ := widget.View.GetRect()
+	userHeader := fmt.Sprintf("%s - [white]%d years[plum] - %5g kg\n", widget.settings.myName, userInfo.Age, userInfo.Weight)
+	pageStar := fmt.Sprintf("[goldenrod]%s\n", widget.settings.common.PaginationMarker(len(widget.pageTypes), widget.idx, width-2))
+
+	var pageHeader, pageData string
+	switch pageName := widget.pageTypes[widget.idx]; pageName {
+	case "sleep":
+		pageHeader, pageData = widget.sleepPage()
+	// case "activity":
+	// case "readiness":
+	// case "bedtime":
+	default:
+		msg := fmt.Sprintf("[blue]Could not find specified page: \"%s\"\n", pageName)
+		notFoundPage := fmt.Sprintf("%s%s%s", userHeader, pageStar, msg)
+		return notFoundPage
+	}
+
+	fullPage := fmt.Sprintf("%s%s%s%s", userHeader, pageStar, pageHeader, pageData)
+	return fullPage
+}
+
+func (widget *Widget) sleepPage() (string, string) {
+	var h, s string
+	h = "[orange]Sleep Data\n"
 	sleepDays, err := getSleepDays()
 	if err != nil {
-		return "Could not get Oura data"
+		s = fmt.Sprintf("Could not get Oura data for %s", widget.settings.myName)
+		return h, fmt.Sprintf("\n\n\n%s", utils.CenterText(s, 16))
 	}
-	wData := fmt.Sprintf("%s - [white]%d years[plum] - %5g kg\n[orange]Sleep Data\n", widget.settings.myName, userInfo.Age, userInfo.Weight)
 	for i := range sleepDays.SleepDays {
-		wData += widget.formatSleep(sleepDays.SleepDays[i])
+		s += widget.formatSleep(sleepDays.SleepDays[i])
 	}
-	return wData
+	return h, s
 }
 
 func getUserInfo() (*UserInfo, error) {
@@ -124,6 +158,8 @@ func getData(endpointOption string) ([]byte, error) {
 	if endpointOption == "user" {
 		endpoint = fmt.Sprintf(endpoint, baseURL)
 	} else {
+		start := time.Now().AddDate(0, 0, dayOffset).Format("2006-01-02")
+		end := time.Now().AddDate(0, 0, 0).Format("2006-01-02") // Today
 		endpoint = fmt.Sprintf(endpoint, baseURL, start, end)
 	}
 
