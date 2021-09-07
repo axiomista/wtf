@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/rivo/tview"
-	"github.com/wtfutil/wtf/utils"
 	"github.com/wtfutil/wtf/view"
 )
 
@@ -27,11 +26,13 @@ const (
 	userInfoEndpoint  = "%s/userinfo"
 	sleepEndpoint     = "%s/sleep?start=%s&end=%s"
 	readinessEndpoint = "%s/readiness?start=%s&end=%s"
+	activityEndpoint  = "%s/activity?start=%s&end=%s"
+	bedtimeEndpoint   = "%s/bedtime?start=%s&end=%s"
 )
 
 var (
-	accessToken = "" // Required config value
-	dayOffset   = -3
+	accessToken string // Required config value
+	dayOffset   int
 	client      = http.DefaultClient
 )
 
@@ -40,8 +41,7 @@ func NewWidget(tviewApp *tview.Application, pages *tview.Pages, settings *Settin
 	widget := Widget{
 		TextWidget: view.NewTextWidget(tviewApp, pages, settings.common),
 		settings:   settings,
-		// pageTypes: []string{"sleep", "activity", "readiness", "bedtime"},
-		pageTypes: []string{"sleep", "readiness"},
+		pageTypes:  []string{"sleep", "readiness", "activity", "bedtime"},
 	}
 	accessToken = widget.settings.accessToken
 	dayOffset = widget.settings.days * -1
@@ -74,8 +74,8 @@ func (widget *Widget) display() {
 func (widget *Widget) content() string {
 	userInfo, err := getUserInfo()
 	if err != nil {
-		msg := fmt.Sprintf("Could not get Oura data for %s", widget.settings.myName)
-		return fmt.Sprintf("\n\n%s", utils.CenterText(msg, 16))
+		msg := fmt.Sprintf("%8sCould not get Oura data for %s", " ", widget.settings.myName)
+		return fmt.Sprintf("\n\n%s", msg)
 	}
 
 	_, _, width, _ := widget.View.GetRect()
@@ -88,8 +88,10 @@ func (widget *Widget) content() string {
 		pageHeader, pageData = widget.sleepPage()
 	case "readiness":
 		pageHeader, pageData = widget.readinessPage()
-	// case "activity":
-	// case "bedtime":
+	case "activity":
+		pageHeader, pageData = widget.activityPage()
+	case "bedtime":
+		pageHeader, pageData = widget.bedtimePage()
 	default:
 		msg := fmt.Sprintf("[blue]Could not find specified page: \"%s\"\n", pageName)
 		notFoundPage := fmt.Sprintf("%s%s%s", userHeader, pageStar, msg)
@@ -102,30 +104,62 @@ func (widget *Widget) content() string {
 
 func (widget *Widget) sleepPage() (string, string) {
 	var h, s string
-	h = "[orange]Sleep Data\n"
-	sleepDays, err := getSleepDays()
+	h = "[orange]Sleep Summaries\n"
+	sleepDays, err := getSleepSummaries()
 	if err != nil {
-		s = fmt.Sprintf("Could not get Oura sleep data for %s", widget.settings.myName)
-		return h, fmt.Sprintf("\n\n\n%s", utils.CenterText(s, 16))
+		s = fmt.Sprintf("%8sCould not get Oura sleep data for %s", " ", widget.settings.myName)
+		return h, fmt.Sprintf("\n\n\n%s", s)
 	}
 	for i := range sleepDays.SleepDays {
-		s += widget.formatSleep(sleepDays.SleepDays[i])
+		s = fmt.Sprintf("%s%s", widget.formatSleep(sleepDays.SleepDays[i]), s)
 	}
 	return h, s
 }
 
 func (widget *Widget) readinessPage() (string, string) {
 	var h, r string
-	h = "[orange]Readiness Data\n"
-	readinessSummaries, err := getReadinessSummaries()
+	h = "[orange]Readiness Summaries\n"
+	readinessDays, err := getReadinessSummaries()
 	if err != nil {
-		r = fmt.Sprintf("Could not get Oura readiness data for %s", widget.settings.myName)
-		return h, fmt.Sprintf("\n\n\n%s", utils.CenterText(r, 16))
+		r = fmt.Sprintf("%8sCould not get Oura readiness data for %s", " ", widget.settings.myName)
+		return h, fmt.Sprintf("\n\n\n%s", r)
 	}
-	for i := range readinessSummaries.ReadinessDays {
-		r += widget.formatReadiness(readinessSummaries.ReadinessDays[i])
+	for i := range readinessDays.ReadinessDays {
+		r = fmt.Sprintf("%s%s", widget.formatReadiness(readinessDays.ReadinessDays[i]), r)
 	}
 	return h, r
+}
+
+func (widget *Widget) activityPage() (string, string) {
+	var h, a string
+	h = "[orange]Activity Summaries\n"
+	activityDays, err := getActivitySummaries()
+	if err != nil {
+		a = fmt.Sprintf("%8sCould not get Oura activity data for %s", " ", widget.settings.myName)
+		return h, fmt.Sprintf("\n\n\n%s", a)
+	}
+	for i := range activityDays.ActivityDays {
+		a = fmt.Sprintf("%s%s", widget.formatActivity(activityDays.ActivityDays[i]), a)
+	}
+	return h, a
+}
+
+func (widget *Widget) bedtimePage() (string, string) {
+	var h, b string
+	b = "[orange]Ideal Bedtimes\n"
+	bedtimes, err := getBedtimes()
+	if err != nil {
+		b = fmt.Sprintf("%8sCould not get Oura activity data for %s", " ", widget.settings.myName)
+		return h, fmt.Sprintf("\n\n\n%s", b)
+	}
+	if bedtimes.IdealBedtimes[len(bedtimes.IdealBedtimes)-1].Status == "NOT_ENOUGH_DATA" {
+		b = fmt.Sprintf("%8sNot enough sleep data for %s--\n%8sNo ideal bedtimes yet! ", " ", widget.settings.myName, " ")
+		return h, fmt.Sprintf("\n\n\n%s", b)
+	}
+	for i := range bedtimes.IdealBedtimes {
+		b = fmt.Sprintf("%s%s", widget.formatBedtime(bedtimes.IdealBedtimes[i]), b)
+	}
+	return h, b
 }
 
 func getUserInfo() (*UserInfo, error) {
@@ -141,7 +175,7 @@ func getUserInfo() (*UserInfo, error) {
 	return userInfoResp, err
 }
 
-func getSleepDays() (*SleepSummaries, error) {
+func getSleepSummaries() (*SleepSummaries, error) {
 	var sleepResp *SleepSummaries
 	sleepData, err := getData("sleep")
 	if err != nil {
@@ -167,6 +201,32 @@ func getReadinessSummaries() (*ReadinessSummaries, error) {
 	return readinessResp, nil
 }
 
+func getActivitySummaries() (*ActivitySummaries, error) {
+	var activityResp *ActivitySummaries
+	activityData, err := getData("activity")
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(activityData, &activityResp)
+	if err != nil {
+		return nil, err
+	}
+	return activityResp, nil
+}
+
+func getBedtimes() (*Bedtimes, error) {
+	var bedtimesResp *Bedtimes
+	bedtimesData, err := getData("bedtime")
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(bedtimesData, &bedtimesResp)
+	if err != nil {
+		return nil, err
+	}
+	return bedtimesResp, nil
+}
+
 func getData(endpointOption string) ([]byte, error) {
 	// Construct endpoint for request
 	var endpoint string
@@ -175,10 +235,10 @@ func getData(endpointOption string) ([]byte, error) {
 		endpoint = sleepEndpoint
 	case "readiness":
 		endpoint = readinessEndpoint
-	// case "activity":
-	// 	endpoint = activityEndpoint
-	// case "bedtime":
-	// 	endpoint = bedtimeEndpoint
+	case "activity":
+		endpoint = activityEndpoint
+	case "bedtime":
+		endpoint = bedtimeEndpoint
 	case "user":
 		endpoint = userInfoEndpoint
 	default:
@@ -227,9 +287,24 @@ func (widget *Widget) formatSleep(sleep Sleep) string {
 func (widget *Widget) formatReadiness(readiness Readiness) string {
 	date := fmt.Sprintf("[grey]%s ", readiness.SummaryDate)
 	score := fmt.Sprintf("[lightblue]score: %d\n", readiness.Score)
-	hr := fmt.Sprintf("[pink]resting HR: %d\n", readiness.ScoreRestingHr)
+	hr := fmt.Sprintf("[pink]resting HR: %d bpm\n", readiness.ScoreRestingHr)
 	recovery := fmt.Sprintf("[turquoise]recovery index: %d\n", readiness.ScoreRecoveryIndex)
 	return fmt.Sprintf("%s%s%s%s \n", date, score, hr, recovery)
+}
+
+func (widget *Widget) formatActivity(activity Activity) string {
+	date := fmt.Sprintf("[grey]%s ", activity.SummaryDate)
+	score := fmt.Sprintf("[lightblue]score: %d\n", activity.Score)
+	activeCals := fmt.Sprintf("[pink]active calories: %d kcal\n", activity.CalActive)
+	steps := fmt.Sprintf("[turquoise]movement recorded: %d steps\n", activity.Steps)
+	return fmt.Sprintf("%s%s%s%s \n", date, score, activeCals, steps)
+}
+
+func (widget *Widget) formatBedtime(bedtime Bedtime) string {
+	date := fmt.Sprintf("[grey]%s ", bedtime.Date)
+	status := fmt.Sprintf("[lightblue]status: %s\n", bedtime.Status)
+	between := fmt.Sprintf("[pink]bedtime window is [chartreuse]between %d and %d \n", bedtime.BedtimeWindow.Start, bedtime.BedtimeWindow.End)
+	return fmt.Sprintf("%s%s%s \n", date, status, between)
 }
 
 func secondsToHuman(input int) string {
