@@ -4,12 +4,45 @@ import (
 	"time"
 )
 
+//The structs I used for unmashalling Oura API responses are
+// built on ones from the nicest Oura API package,
+//**https://github.com/lildude/oura**, with gratitude.
+
+// OuraData is a struct containing all data available for a user through the Oura API.
+type OuraData struct {
+	UserInfo      *UserInfo   `json:"user_info"`
+	SleepDays     []Sleep     `json:"sleep"`
+	ReadinessDays []Readiness `json:"readiness"`
+	ActivityDays  []Activity  `json:"activity"`
+	IdealBedtimes []Bedtime   `json:"ideal_bedtimes"`
+}
+
 // UserInfo is the information for the current user
 type UserInfo struct {
 	Age    int     `json:"age"`
 	Weight float64 `json:"weight"`
 	Gender string  `json:"gender"`
 	Email  string  `json:"email"`
+}
+
+// SleepSummaries represents all sleep summaries for the period requested
+type SleepSummaries struct {
+	SleepDays []Sleep `json:"sleep"`
+}
+
+// ReadinessSummaries represents all readiness summaries for the period requested
+type ReadinessSummaries struct {
+	ReadinessDays []Readiness `json:"readiness"`
+}
+
+// ActivitySummaries represents all activity in the summary for the period requested
+type ActivitySummaries struct {
+	ActivityDays []Activity `json:"activity"`
+}
+
+// Bedtimes represents all ideal bedtimes for the period requested
+type Bedtimes struct {
+	IdealBedtimes []Bedtime `json:"ideal_bedtimes"`
 }
 
 // Sleep represents a single day's sleep summary
@@ -48,11 +81,6 @@ type Sleep struct {
 	Rmssd5min         []int     `json:"rmssd_5min"`
 }
 
-// Sleeps represents all sleep summaries for the period requested
-type SleepSummaries struct {
-	SleepDays []Sleep `json:"sleep"`
-}
-
 // Readiness represents a single day's readiness summary
 type Readiness struct {
 	SummaryDate          string `json:"summary_date"`
@@ -67,11 +95,6 @@ type Readiness struct {
 	ScoreRecoveryIndex   int    `json:"score_recovery_index"`
 	ScoreTemperature     int    `json:"score_temperature"`
 	RestModeState        int    `json:"rest_mode_state"`
-}
-
-// ReadinessSummaries represents all readiness summaries for the period requested
-type ReadinessSummaries struct {
-	ReadinessDays []Readiness `json:"readiness"`
 }
 
 // Activity represents a single day's activity summary
@@ -109,11 +132,6 @@ type Activity struct {
 	RestModeState          int       `json:"rest_mode_state"`
 }
 
-// Activities represents all activity in the summary for the period requested
-type ActivitySummaries struct {
-	ActivityDays []Activity `json:"activity"`
-}
-
 // Bedtime represents a single day's bedtime recommendation
 type Bedtime struct {
 	Date          string `json:"date"`
@@ -122,9 +140,4 @@ type Bedtime struct {
 		End   int `json:"end"`
 	} `json:"bedtime_window"`
 	Status string `json:"status"`
-}
-
-// Bedtimes represents all ideal bedtimes for the period requested
-type Bedtimes struct {
-	IdealBedtimes []Bedtime `json:"ideal_bedtimes"`
 }
