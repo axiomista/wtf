@@ -20,9 +20,9 @@ type Widget struct {
 }
 
 // NewWidget creates and returns an instance of Widget
-func NewWidget(tviewApp *tview.Application, pages *tview.Pages, settings *Settings) *Widget {
+func NewWidget(tviewApp *tview.Application, redrawChan chan bool, pages *tview.Pages, settings *Settings) *Widget {
 	widget := Widget{
-		TextWidget: view.NewTextWidget(tviewApp, pages, settings.common),
+		TextWidget: view.NewTextWidget(tviewApp, redrawChan, pages, settings.common),
 		settings:   settings,
 		pageTypes:  []string{"sleep", "readiness", "activity", "bedtime"},
 		ouraData:   &OuraData{},

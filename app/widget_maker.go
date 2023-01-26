@@ -269,7 +269,7 @@ func MakeWidget(
 		widget = opsgenie.NewWidget(tviewApp, redrawChan, settings)
 	case "oura":
 		settings := oura.NewSettingsFromYAML(moduleName, moduleConfig, config)
-		widget = oura.NewWidget(tviewApp, pages, settings)
+		widget = oura.NewWidget(tviewApp, redrawChan, pages, settings)
 	case "pagerduty":
 		settings := pagerduty.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = pagerduty.NewWidget(tviewApp, redrawChan, settings)
