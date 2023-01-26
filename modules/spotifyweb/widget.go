@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/rivo/tview"
 	"github.com/wtfutil/wtf/utils"
@@ -60,7 +61,7 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // NewWidget creates a new widget for WTF
-func NewWidget(tviewApp *tview.Application, pages *tview.Pages, settings *Settings) *Widget {
+func NewWidget(tviewApp *tview.Application, redrawChan chan bool, pages *tview.Pages, settings *Settings) *Widget {
 	redirectURI = "http://localhost:" + settings.callbackPort + "/callback"
 
 	auth = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadCurrentlyPlaying, spotify.ScopeUserReadPlaybackState, spotify.ScopeUserModifyPlaybackState)
@@ -71,7 +72,7 @@ func NewWidget(tviewApp *tview.Application, pages *tview.Pages, settings *Settin
 	var playerState *spotify.PlayerState
 
 	widget := Widget{
-		TextWidget: view.NewTextWidget(tviewApp, pages, settings.Common),
+		TextWidget: view.NewTextWidget(tviewApp, redrawChan, pages, settings.Common),
 
 		Info: Info{},
 
@@ -119,7 +120,7 @@ func NewWidget(tviewApp *tview.Application, pages *tview.Pages, settings *Settin
 	// If inconvenient, I'll remove this option and save the URL in a file or some other method.
 	utils.OpenFile(`"` + authURL + `"`)
 
-	widget.settings.RefreshInterval = 5
+	widget.settings.RefreshInterval = 5 * time.Second
 
 	widget.initializeKeyboardControls()
 

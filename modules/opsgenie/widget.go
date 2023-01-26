@@ -15,9 +15,9 @@ type Widget struct {
 	settings *Settings
 }
 
-func NewWidget(tviewApp *tview.Application, settings *Settings) *Widget {
+func NewWidget(tviewApp *tview.Application, redrawChan chan bool, settings *Settings) *Widget {
 	widget := Widget{
-		TextWidget: view.NewTextWidget(tviewApp, nil, settings.Common),
+		TextWidget: view.NewTextWidget(tviewApp, redrawChan, nil, settings.Common),
 
 		settings: settings,
 	}
@@ -68,6 +68,6 @@ func (widget *Widget) content() (string, string, bool) {
 }
 
 func (widget *Widget) cleanScheduleName(schedule string) string {
-	cleanedName := strings.Replace(schedule, "_", " ", -1)
+	cleanedName := strings.ReplaceAll(schedule, "_", " ")
 	return fmt.Sprintf(" [green]%s[white]\n", cleanedName)
 }

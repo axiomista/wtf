@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -59,11 +59,15 @@ func buildJql(key string, value string) string {
 func (widget *Widget) jiraRequest(path string) ([]byte, error) {
 	url := fmt.Sprintf("%s%s", widget.settings.domain, path)
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", url, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
-	req.SetBasicAuth(widget.settings.email, widget.settings.apiKey)
+	if widget.settings.personalAccessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+widget.settings.personalAccessToken)
+	} else {
+		req.SetBasicAuth(widget.settings.email, widget.settings.apiKey)
+	}
 
 	httpClient := &http.Client{
 		Transport: &http.Transport{
@@ -84,7 +88,7 @@ func (widget *Widget) jiraRequest(path string) ([]byte, error) {
 		return nil, fmt.Errorf(resp.Status)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +97,7 @@ func (widget *Widget) jiraRequest(path string) ([]byte, error) {
 }
 
 func getProjectQuery(projects []string) string {
-	singleEmptyProject := len(projects) == 1 && len(projects[0]) == 0
+	singleEmptyProject := len(projects) == 1 && projects[0] == ""
 	if len(projects) == 0 || singleEmptyProject {
 		return ""
 	} else if len(projects) == 1 {

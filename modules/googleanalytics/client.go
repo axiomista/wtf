@@ -3,9 +3,9 @@ package googleanalytics
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -22,7 +22,7 @@ type websiteReport struct {
 	RealtimeReport *gaV3.RealtimeData
 }
 
-func (widget *Widget) Fetch() []websiteReport {
+func (widget *Widget) fetch() []websiteReport {
 	secretPath, err := utils.ExpandHomeDir(widget.settings.secretFile)
 	if err != nil {
 		log.Fatalf("Unable to parse secretFile path")
@@ -48,7 +48,7 @@ func (widget *Widget) Fetch() []websiteReport {
 }
 
 func buildNetClient(secretPath string) *http.Client {
-	clientSecret, err := ioutil.ReadFile(filepath.Clean(secretPath))
+	clientSecret, err := os.ReadFile(filepath.Clean(secretPath))
 	if err != nil {
 		log.Fatalf("Unable to read secretPath. %v", err)
 	}

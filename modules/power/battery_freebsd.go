@@ -1,4 +1,4 @@
-// +build freebsd
+//go:build freebsd
 
 package power
 
@@ -40,9 +40,10 @@ func (battery *Battery) String() string {
 /* -------------------- Unexported Functions -------------------- */
 
 // returns 3 numbers
-//   1/0   = AC/battery
-//   c     = battery charge percentage
-//   -1/s  = charging / seconds to empty
+//
+//	1/0   = AC/battery
+//	c     = battery charge percentage
+//	-1/s  = charging / seconds to empty
 func (battery *Battery) execute() string {
 	cmd := exec.Command("apm", "-alt")
 	return utils.ExecuteCommand(cmd)
@@ -64,30 +65,16 @@ func (battery *Battery) parse(data string) string {
 		timeToEmpty = fmt.Sprintf("%2d:%02d:%02d", h, m, s)
 	}
 
-	str := fmt.Sprintf(" %10s: %s%%\n", "Charge", battery.formatCharge(charge))
-	str += fmt.Sprintf(" %10s: %s\n", "Remaining", timeToEmpty)
-	str += fmt.Sprintf(" %10s: %s\n", "State", battery.formatState(batteryState))
-	//	if s := table["time to full"]; s != "" {
-	//		str += fmt.Sprintf(" %10s: %s\n", "TimeToFull", table["time to full"])
-	//	}
+	str := fmt.Sprintf(" %14s: %s%%\n", "Charge", battery.formatCharge(charge))
+	str += fmt.Sprintf(" %14s: %s\n", "Remaining", timeToEmpty)
+	str += fmt.Sprintf(" %14s: %s\n", "State", battery.formatState(batteryState))
 
 	return str
 }
 
 func (battery *Battery) formatCharge(data string) string {
 	percent, _ := strconv.ParseFloat(strings.Replace(data, "%", "", -1), 32)
-	color := ""
-
-	switch {
-	case percent >= 70:
-		color = "[green]"
-	case percent >= 35:
-		color = "[yellow]"
-	default:
-		color = "[red]"
-	}
-
-	return color + data + "[white]"
+	return utils.ColorizePercent(percent)
 }
 
 func (battery *Battery) formatState(data string) string {

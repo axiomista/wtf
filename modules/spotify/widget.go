@@ -2,6 +2,8 @@ package spotify
 
 import (
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/rivo/tview"
 	"github.com/wtfutil/spotigopher/spotigopher"
@@ -19,9 +21,9 @@ type Widget struct {
 }
 
 // NewWidget creates a new instance of a widget
-func NewWidget(tviewApp *tview.Application, pages *tview.Pages, settings *Settings) *Widget {
+func NewWidget(tviewApp *tview.Application, redrawChan chan bool, pages *tview.Pages, settings *Settings) *Widget {
 	widget := Widget{
-		TextWidget: view.NewTextWidget(tviewApp, pages, settings.Common),
+		TextWidget: view.NewTextWidget(tviewApp, redrawChan, pages, settings.Common),
 
 		Info:   spotigopher.Info{},
 		client: spotigopher.NewClient(),
@@ -29,7 +31,7 @@ func NewWidget(tviewApp *tview.Application, pages *tview.Pages, settings *Settin
 		settings: settings,
 	}
 
-	widget.settings.RefreshInterval = 5
+	widget.settings.RefreshInterval = 5 * time.Second
 
 	widget.initializeKeyboardControls()
 
@@ -58,9 +60,11 @@ func (w *Widget) createOutput() (string, string, bool) {
 		labelColor := w.settings.colors.label
 		textColor := w.settings.colors.text
 
+		artist := strings.Join(w.Info.Artist, ", ")
+
 		content = utils.CenterText(fmt.Sprintf("[%s]Now %v [%s]\n", labelColor, w.Info.Status, textColor), w.CommonSettings().Width)
 		content += utils.CenterText(fmt.Sprintf("[%s]Title:[%s] %v\n ", labelColor, textColor, w.Info.Title), w.CommonSettings().Width)
-		content += utils.CenterText(fmt.Sprintf("[%s]Artist:[%s] %v\n", labelColor, textColor, w.Info.Artist), w.CommonSettings().Width)
+		content += utils.CenterText(fmt.Sprintf("[%s]Artist:[%s] %v\n", labelColor, textColor, artist), w.CommonSettings().Width)
 		content += utils.CenterText(fmt.Sprintf("[%s]%v:[%s] %v\n", labelColor, w.Info.TrackNumber, textColor, w.Info.Album), w.CommonSettings().Width)
 	}
 	return w.CommonSettings().Title, content, true

@@ -3,7 +3,7 @@ package nbascore
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -24,9 +24,9 @@ type Widget struct {
 }
 
 // NewWidget creates a new instance of a widget
-func NewWidget(tviewApp *tview.Application, pages *tview.Pages, settings *Settings) *Widget {
+func NewWidget(tviewApp *tview.Application, redrawChan chan bool, pages *tview.Pages, settings *Settings) *Widget {
 	widget := Widget{
-		TextWidget: view.NewTextWidget(tviewApp, pages, settings.Common),
+		TextWidget: view.NewTextWidget(tviewApp, redrawChan, pages, settings.Common),
 
 		settings: settings,
 	}
@@ -47,7 +47,7 @@ func (widget *Widget) nbascore() (string, string, bool) {
 	cur := time.Now().AddDate(0, 0, offset) // Go back/forward offset days
 	curString := cur.Format("20060102")     // Need 20060102 format to feed to api
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", "http://data.nba.net/10s/prod/v1/"+curString+"/scoreboard.json", nil)
+	req, err := http.NewRequest("GET", "http://data.nba.net/10s/prod/v1/"+curString+"/scoreboard.json", http.NoBody)
 	if err != nil {
 		return title, err.Error(), true
 	}
@@ -63,7 +63,7 @@ func (widget *Widget) nbascore() (string, string, bool) {
 		return title, err.Error(), true
 	} // Get data from data.nba.net and check if successful
 
-	contents, err := ioutil.ReadAll(response.Body)
+	contents, err := io.ReadAll(response.Body)
 	if err != nil {
 		return title, err.Error(), true
 	}

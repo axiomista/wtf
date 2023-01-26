@@ -3,6 +3,7 @@ package view
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/rivo/tview"
 	"github.com/wtfutil/wtf/cfg"
@@ -20,15 +21,17 @@ type Base struct {
 	name            string
 	pages           *tview.Pages
 	quitChan        chan bool
-	refreshInterval int
+	refreshInterval time.Duration
 	refreshing      bool
 	tviewApp        *tview.Application
 	view            *tview.TextView
+
+	RedrawChan chan bool
 }
 
 // NewBase creates and returns an instance of the Base module, the lowest-level
 // primitive module from which all others are derived
-func NewBase(tviewApp *tview.Application, pages *tview.Pages, commonSettings *cfg.Common) *Base {
+func NewBase(tviewApp *tview.Application, redrawChan chan bool, pages *tview.Pages, commonSettings *cfg.Common) *Base {
 	base := &Base{
 		commonSettings: commonSettings,
 
@@ -43,6 +46,8 @@ func NewBase(tviewApp *tview.Application, pages *tview.Pages, commonSettings *cf
 		refreshInterval: commonSettings.RefreshInterval,
 		refreshing:      false,
 		tviewApp:        tviewApp,
+
+		RedrawChan: redrawChan,
 	}
 
 	return base
@@ -129,8 +134,8 @@ func (base *Base) Refreshing() bool {
 	return base.refreshing
 }
 
-// RefreshInterval returns how often, in seconds, the base will return its data
-func (base *Base) RefreshInterval() int {
+// RefreshInterval returns how often the base will return its data
+func (base *Base) RefreshInterval() time.Duration {
 	return base.refreshInterval
 }
 
@@ -159,9 +164,8 @@ func (base *Base) ShowHelp() {
 	base.pages.AddPage("help", modal, false, true)
 	base.tviewApp.SetFocus(modal)
 
-	base.tviewApp.QueueUpdate(func() {
-		base.tviewApp.Draw()
-	})
+	// Tell the app to force redraw the screen
+	base.RedrawChan <- true
 }
 
 func (base *Base) Stop() {

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strconv"
 	"strings"
 
@@ -36,7 +36,7 @@ type Widget struct {
 	err      error
 }
 
-func NewWidget(tviewApp *tview.Application, pages *tview.Pages, settings *Settings) *Widget {
+func NewWidget(tviewApp *tview.Application, redrawChan chan bool, pages *tview.Pages, settings *Settings) *Widget {
 	var widget Widget
 
 	leagueId, err := getLeague(settings.league)
@@ -51,7 +51,7 @@ func NewWidget(tviewApp *tview.Application, pages *tview.Pages, settings *Settin
 	}
 
 	widget = Widget{
-		TextWidget: view.NewTextWidget(tviewApp, pages, settings.Common),
+		TextWidget: view.NewTextWidget(tviewApp, redrawChan, pages, settings.Common),
 		Client:     NewClient(settings.apiKey),
 		League:     leagueId,
 		settings:   settings,
@@ -100,7 +100,7 @@ func (widget *Widget) GetStandings(leagueId int) string {
 		return fmt.Sprintf("Error fetching standings: %s", err.Error())
 	}
 	defer func() { _ = resp.Body.Close() }()
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Sprintf("Error fetching standings: %s", err.Error())
 	}
@@ -146,7 +146,7 @@ func (widget *Widget) GetMatches(leagueId int) string {
 		return fmt.Sprintf("Error fetching matches: %s", err.Error())
 	}
 	defer func() { _ = resp.Body.Close() }()
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Sprintf("Error fetching matches: %s", err.Error())
 	}

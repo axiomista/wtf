@@ -23,10 +23,10 @@ type Widget struct {
 }
 
 // NewWidget creates a new instance of the widget
-func NewWidget(tviewApp *tview.Application, pages *tview.Pages, settings *Settings) *Widget {
+func NewWidget(tviewApp *tview.Application, redrawChan chan bool, pages *tview.Pages, settings *Settings) *Widget {
 	widget := Widget{
 		MultiSourceWidget: view.NewMultiSourceWidget(settings.Common, "repository", "repositories"),
-		TextWidget:        view.NewTextWidget(tviewApp, pages, settings.Common),
+		TextWidget:        view.NewTextWidget(tviewApp, redrawChan, pages, settings.Common),
 
 		settings: settings,
 	}
@@ -71,7 +71,8 @@ func (widget *Widget) Next() {
 	if widget.Selected >= widget.maxItems {
 		widget.Selected = 0
 	}
-	widget.View.Highlight(strconv.Itoa(widget.Selected)).ScrollToHighlight()
+	widget.View.Highlight(strconv.Itoa(widget.Selected))
+	widget.View.ScrollToHighlight()
 }
 
 // Prev cycles the currently highlighted text up
@@ -80,7 +81,8 @@ func (widget *Widget) Prev() {
 	if widget.Selected < 0 {
 		widget.Selected = widget.maxItems - 1
 	}
-	widget.View.Highlight(strconv.Itoa(widget.Selected)).ScrollToHighlight()
+	widget.View.Highlight(strconv.Itoa(widget.Selected))
+	widget.View.ScrollToHighlight()
 }
 
 // Unselect stops highlighting the text and jumps the scroll position to the top
@@ -135,7 +137,7 @@ func (widget *Widget) currentGithubRepo() *Repo {
 
 func (widget *Widget) openPr() {
 	currentSelection := widget.View.GetHighlights()
-	if widget.Selected >= 0 && currentSelection[0] != "" {
+	if widget.Selected >= 0 && len(widget.Items) > 0 && currentSelection[0] != "" {
 		url := (*widget.currentGithubRepo().RemoteRepo.HTMLURL + "/pull/" + strconv.Itoa(widget.Items[widget.Selected]))
 		utils.OpenFile(url)
 	}

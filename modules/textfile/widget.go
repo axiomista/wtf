@@ -3,7 +3,7 @@ package textfile
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -29,10 +29,10 @@ type Widget struct {
 }
 
 // NewWidget creates a new instance of a widget
-func NewWidget(tviewApp *tview.Application, pages *tview.Pages, settings *Settings) *Widget {
+func NewWidget(tviewApp *tview.Application, redrawChan chan bool, pages *tview.Pages, settings *Settings) *Widget {
 	widget := Widget{
 		MultiSourceWidget: view.NewMultiSourceWidget(settings.Common, "filePath", "filePaths"),
-		TextWidget:        view.NewTextWidget(tviewApp, pages, settings.Common),
+		TextWidget:        view.NewTextWidget(tviewApp, redrawChan, pages, settings.Common),
 
 		settings: settings,
 	}
@@ -103,8 +103,10 @@ func (widget *Widget) formattedText() string {
 		formatter = formatters.Fallback
 	}
 
-	contents, _ := ioutil.ReadAll(file)
-	iterator, _ := lexer.Tokenise(nil, string(contents))
+	contents, _ := io.ReadAll(file)
+	str := string(contents)
+	str = tview.Escape(str)
+	iterator, _ := lexer.Tokenise(nil, str)
 
 	var buf bytes.Buffer
 	err = formatter.Format(&buf, style, iterator)
@@ -118,11 +120,11 @@ func (widget *Widget) formattedText() string {
 func (widget *Widget) plainText() string {
 	filePath, _ := utils.ExpandHomeDir(filepath.Clean(widget.CurrentSource()))
 
-	text, err := ioutil.ReadFile(filepath.Clean(filePath))
+	text, err := os.ReadFile(filepath.Clean(filePath))
 	if err != nil {
 		return err.Error()
 	}
-	return string(text)
+	return tview.Escape(string(text))
 }
 
 func (widget *Widget) watchForFileChanges() {
@@ -139,6 +141,10 @@ func (widget *Widget) watchForFileChanges() {
 				os.Exit(1)
 			case <-watch.Closed:
 				return
+			case quit := <-widget.QuitChan():
+				if quit {
+					return
+				}
 			}
 		}
 	}()

@@ -27,9 +27,9 @@ type Widget struct {
 }
 
 // NewWidget creates a new instance of the widget
-func NewWidget(tviewApp *tview.Application, settings *Settings) *Widget {
+func NewWidget(tviewApp *tview.Application, redrawChan chan bool, settings *Settings) *Widget {
 	widget := Widget{
-		TextWidget: view.NewTextWidget(tviewApp, nil, settings.Common),
+		TextWidget: view.NewTextWidget(tviewApp, redrawChan, nil, settings.Common),
 
 		settings: settings,
 		buffer:   &bytes.Buffer{},
@@ -124,6 +124,7 @@ func runCommandLoop(widget *Widget) {
 		widget.resetBuffer()
 		cmd := exec.Command(widget.settings.cmd, widget.settings.args...)
 		cmd.Env = widget.environment()
+		cmd.Dir = widget.settings.workingDir
 		var err error
 		if widget.settings.pty {
 			err = runCommandPty(widget, cmd)
@@ -150,7 +151,10 @@ func runCommandPty(widget *Widget, cmd *exec.Cmd) error {
 	}
 
 	_, err = io.Copy(widget.buffer, f)
-	return err
+	if err != nil {
+		return err
+	}
+	return cmd.Wait()
 }
 
 func (widget *Widget) handleError(err error) {
@@ -177,11 +181,11 @@ func (widget *Widget) content() (string, string, bool) {
 	result := widget.buffer.String()
 	widget.m.Unlock()
 
-	ansiTitle := tview.TranslateANSI(widget.CommonSettings().Title)
+	ansiTitle := tview.TranslateANSI(tview.Escape(widget.CommonSettings().Title))
 	if ansiTitle == defaultTitle {
-		ansiTitle = tview.TranslateANSI(widget.String())
+		ansiTitle = tview.TranslateANSI(tview.Escape(widget.String()))
 	}
-	ansiResult := tview.TranslateANSI(result)
+	ansiResult := tview.TranslateANSI(tview.Escape(result))
 
 	return ansiTitle, ansiResult, false
 }

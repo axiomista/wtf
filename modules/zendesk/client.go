@@ -1,9 +1,8 @@
 package zendesk
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 )
 
@@ -12,7 +11,7 @@ type Resource struct {
 	Raw      string
 }
 
-func (widget *Widget) api(meth string, path string, params string) (*Resource, error) {
+func (widget *Widget) api(meth string) (*Resource, error) {
 	trn := &http.Transport{}
 
 	client := &http.Client{
@@ -22,7 +21,7 @@ func (widget *Widget) api(meth string, path string, params string) (*Resource, e
 	baseURL := fmt.Sprintf("https://%v.zendesk.com/api/v2", widget.settings.subdomain)
 	URL := baseURL + "/tickets.json?sort_by=status"
 
-	req, err := http.NewRequest(meth, URL, bytes.NewBufferString(params))
+	req, err := http.NewRequest(meth, URL, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +37,7 @@ func (widget *Widget) api(meth string, path string, params string) (*Resource, e
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

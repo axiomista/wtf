@@ -1,11 +1,11 @@
 package git
 
 import (
-	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
-	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/wtfutil/wtf/utils"
 	"github.com/wtfutil/wtf/view"
@@ -28,10 +28,10 @@ type Widget struct {
 	tviewApp *tview.Application
 }
 
-func NewWidget(tviewApp *tview.Application, pages *tview.Pages, settings *Settings) *Widget {
+func NewWidget(tviewApp *tview.Application, redrawChan chan bool, pages *tview.Pages, settings *Settings) *Widget {
 	widget := Widget{
 		MultiSourceWidget: view.NewMultiSourceWidget(settings.Common, "repository", "repositories"),
-		TextWidget:        view.NewTextWidget(tviewApp, pages, settings.Common),
+		TextWidget:        view.NewTextWidget(tviewApp, redrawChan, pages, settings.Common),
 
 		tviewApp: tviewApp,
 		pages:    pages,
@@ -102,17 +102,15 @@ func (widget *Widget) addCancelButton(form *tview.Form) {
 }
 
 func (widget *Widget) modalFocus(form *tview.Form) {
-	widget.tviewApp.QueueUpdateDraw(func() {
-		frame := widget.modalFrame(form)
-		widget.pages.AddPage("modal", frame, false, true)
-		widget.tviewApp.SetFocus(frame)
-	})
+	frame := widget.modalFrame(form)
+	widget.pages.AddPage("modal", frame, false, true)
+	widget.tviewApp.SetFocus(frame)
 }
 
 func (widget *Widget) modalForm(lbl, text string) *tview.Form {
-	form := tview.NewForm().
-		SetButtonsAlign(tview.AlignCenter).
-		SetButtonTextColor(tview.Styles.PrimaryTextColor)
+	form := tview.NewForm()
+	form.SetButtonsAlign(tview.AlignCenter)
+	form.SetButtonTextColor(tview.Styles.PrimaryTextColor)
 
 	form.AddInputField(lbl, text, 60, nil, nil)
 
@@ -120,7 +118,8 @@ func (widget *Widget) modalForm(lbl, text string) *tview.Form {
 }
 
 func (widget *Widget) modalFrame(form *tview.Form) *tview.Frame {
-	frame := tview.NewFrame(form).SetBorders(0, 0, 0, 0, 0, 0)
+	frame := tview.NewFrame(form)
+	frame.SetBorders(0, 0, 0, 0, 0, 0)
 	frame.SetRect(offscreen, offscreen, modalWidth, modalHeight)
 	frame.SetBorder(true)
 	frame.SetBorders(1, 1, 0, 0, 1, 1)
@@ -152,7 +151,7 @@ func (widget *Widget) gitRepos(repoPaths []string) []*GitRepo {
 	repos := []*GitRepo{}
 
 	for _, repoPath := range repoPaths {
-		if strings.HasSuffix(repoPath, "/") {
+		if strings.HasSuffix(repoPath, string(os.PathSeparator)) {
 			repos = append(repos, widget.findGitRepositories(make([]*GitRepo, 0), repoPath)...)
 
 		} else {
@@ -171,9 +170,9 @@ func (widget *Widget) gitRepos(repoPaths []string) []*GitRepo {
 }
 
 func (widget *Widget) findGitRepositories(repositories []*GitRepo, directory string) []*GitRepo {
-	directory = strings.TrimSuffix(directory, "/")
+	directory = strings.TrimSuffix(directory, string(os.PathSeparator))
 
-	files, err := ioutil.ReadDir(directory)
+	files, err := os.ReadDir(directory)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -182,10 +181,10 @@ func (widget *Widget) findGitRepositories(repositories []*GitRepo, directory str
 
 	for _, file := range files {
 		if file.IsDir() {
-			path = directory + "/" + file.Name()
+			path = directory + string(os.PathSeparator) + file.Name()
 
 			if file.Name() == ".git" {
-				path = strings.TrimSuffix(path, "/.git")
+				path = strings.TrimSuffix(path, string(os.PathSeparator)+".git")
 
 				repo := NewGitRepo(
 					path,

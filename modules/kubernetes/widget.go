@@ -1,7 +1,9 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
+	"sync"
 
 	"github.com/rivo/tview"
 	"github.com/wtfutil/wtf/utils"
@@ -14,6 +16,9 @@ import (
 type Widget struct {
 	view.TextWidget
 
+	client     *clientInstance
+	clientOnce sync.Once
+
 	objects    []string
 	title      string
 	kubeconfig string
@@ -23,9 +28,9 @@ type Widget struct {
 }
 
 // NewWidget creates a new instance of the widget
-func NewWidget(tviewApp *tview.Application, settings *Settings) *Widget {
+func NewWidget(tviewApp *tview.Application, redrawChan chan bool, settings *Settings) *Widget {
 	widget := Widget{
-		TextWidget: view.NewTextWidget(tviewApp, nil, settings.Common),
+		TextWidget: view.NewTextWidget(tviewApp, redrawChan, nil, settings.Common),
 
 		objects:    settings.objects,
 		title:      settings.title,
@@ -98,7 +103,7 @@ func (widget *Widget) Refresh() {
 
 // generateTitle generates a title for the widget
 func (widget *Widget) generateTitle() string {
-	if len(widget.title) != 0 {
+	if widget.title != "" {
 		return widget.title
 	}
 	title := "Kube"
@@ -120,7 +125,7 @@ func (client *clientInstance) getPods(namespaces []string) ([]string, error) {
 	var podList []string
 	if len(namespaces) != 0 {
 		for _, namespace := range namespaces {
-			pods, err := client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+			pods, err := client.Client.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
 			if err != nil {
 				return nil, err
 			}
@@ -138,7 +143,7 @@ func (client *clientInstance) getPods(namespaces []string) ([]string, error) {
 			}
 		}
 	} else {
-		pods, err := client.Client.CoreV1().Pods("").List(metav1.ListOptions{})
+		pods, err := client.Client.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -156,7 +161,7 @@ func (client *clientInstance) getDeployments(namespaces []string) ([]string, err
 	var deploymentList []string
 	if len(namespaces) != 0 {
 		for _, namespace := range namespaces {
-			deployments, err := client.Client.AppsV1().Deployments(namespace).List(metav1.ListOptions{})
+			deployments, err := client.Client.AppsV1().Deployments(namespace).List(context.Background(), metav1.ListOptions{})
 			if err != nil {
 				return nil, err
 			}
@@ -172,7 +177,7 @@ func (client *clientInstance) getDeployments(namespaces []string) ([]string, err
 			}
 		}
 	} else {
-		deployments, err := client.Client.AppsV1().Deployments("").List(metav1.ListOptions{})
+		deployments, err := client.Client.AppsV1().Deployments("").List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -189,7 +194,7 @@ func (client *clientInstance) getDeployments(namespaces []string) ([]string, err
 func (client *clientInstance) getNodes() ([]string, error) {
 	var nodeList []string
 
-	nodes, err := client.Client.CoreV1().Nodes().List(metav1.ListOptions{})
+	nodes, err := client.Client.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

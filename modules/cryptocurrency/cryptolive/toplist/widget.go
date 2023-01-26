@@ -15,7 +15,7 @@ var baseURL = "https://min-api.cryptocompare.com/data/top/exchanges"
 type Widget struct {
 	Result string
 
-	RefreshInterval int
+	RefreshInterval time.Duration
 
 	list     *cList
 	settings *Settings
@@ -105,6 +105,6 @@ func (widget *Widget) updateData() {
 
 func makeRequest(fsym, tsym string, limit int) *http.Request {
 	url := fmt.Sprintf("%s?fsym=%s&tsym=%s&limit=%d", baseURL, fsym, tsym, limit)
-	request, _ := http.NewRequest("GET", url, nil)
+	request, _ := http.NewRequest("GET", url, http.NoBody)
 	return request
 }

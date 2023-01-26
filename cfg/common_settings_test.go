@@ -2,6 +2,7 @@ package cfg
 
 import (
 	"testing"
+	"time"
 
 	"github.com/olebedev/config"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,7 @@ func Test_NewCommonSettingsFromModule(t *testing.T) {
 	assert.Equal(t, "test", testCfg.Module.Name)
 	assert.Equal(t, "test", testCfg.Module.Type)
 	assert.Equal(t, "", testCfg.FocusChar())
-	assert.Equal(t, 300, testCfg.RefreshInterval)
+	assert.Equal(t, 300*time.Second, testCfg.RefreshInterval)
 	assert.Equal(t, "Test Config", testCfg.Title)
 }
 
@@ -98,12 +99,12 @@ func Test_RowColor(t *testing.T) {
 		{
 			name:          "odd rows, default",
 			idx:           3,
-			expectedColor: "lightblue",
+			expectedColor: "lightblue:transparent",
 		},
 		{
 			name:          "even rows, default",
 			idx:           8,
-			expectedColor: "white",
+			expectedColor: "white:transparent",
 		},
 	}
 

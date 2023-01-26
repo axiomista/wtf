@@ -24,6 +24,8 @@ export GOPROXY = https://proxy.golang.org,direct
 # Determines the path to this Makefile
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
+GOBIN := $(GOPATH)/bin
+
 APP=wtfutil
 
 define HEADER
@@ -77,8 +79,11 @@ docker-install:
 	docker rm wtf_build
 
 ## gosec: runs the gosec static security scanner against the source code
-gosec:
+gosec: $(GOBIN)/gosec
 	gosec -tests ./...
+
+$(GOBIN)/gosec:
+	cd && go install github.com/securego/gosec/v2/cmd/gosec@latest
 
 ## help: prints this help message
 help:
@@ -95,15 +100,18 @@ install:
 	@echo "$$HEADER"
 	@echo "Installing ${APP} with ${GOVERS}..."
 	@go clean
-	@go install -ldflags="-s -w -X main.version=$(shell git describe --always --abbrev=6) -X main.date=$(shell date +%FT%T%z)"
-	@mv ~/go/bin/wtf ~/go/bin/${APP}
+	@go install -ldflags="-s -w"
+	@mv $(GOBIN)/wtf $(GOBIN)/${APP}
 	$(eval INSTALLPATH = $(shell which ${APP}))
 	@echo "${APP} installed into ${INSTALLPATH}"
 
 ## lint: runs a number of code quality checks against the source code
-lint:
+lint: $(GOBIN)/golangci-lint
 	golangci-lint cache clean
 	golangci-lint run
+
+$(GOBIN)/golangci-lint:
+	cd && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
 # lint:
 # 	@echo "\033[35mhttps://github.com/kisielk/errcheck\033[0m"
@@ -161,4 +169,4 @@ test: build
 
 ## uninstall: uninstals a locally-installed version
 uninstall:
-	@rm ~/go/bin/${APP}
+	@rm $(GOBIN)/${APP}

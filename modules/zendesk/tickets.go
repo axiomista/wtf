@@ -26,12 +26,12 @@ type Ticket struct {
 	Priority              string      `json:"priority"`
 	Status                string      `json:"status"`
 	Recipient             string      `json:"recipient"`
-	RequesterId           uint32      `json:"requester_id"`
-	SubmitterId           uint32      `json:"submitter_id"`
-	AssigneeId            uint32      `json:"assignee_id"`
+	RequesterId           uint64      `json:"requester_id"`
+	SubmitterId           uint64      `json:"submitter_id"`
+	AssigneeId            uint64      `json:"assignee_id"`
 	OrganizationId        uint32      `json:"organization_id"`
 	GroupId               uint32      `json:"group_id"`
-	CollaboratorIds       []int32     `json:"collaborator_ids"`
+	CollaboratorIds       []int64     `json:"collaborator_ids"`
 	ForumTopicId          uint32      `json:"forum_topic_id"`
 	ProblemId             uint32      `json:"problem_id"`
 	HasIncidents          bool        `json:"has_incidents"`
@@ -46,27 +46,19 @@ type Ticket struct {
 }
 
 func (widget *Widget) listTickets(pag ...string) (*TicketArray, error) {
+	tickets := &TicketArray{}
 
-	TicketStruct := &TicketArray{}
-
-	var path string
-	if len(pag) < 1 {
-		path = "/tickets.json"
-	} else {
-		path = pag[0]
-	}
-
-	resource, err := widget.api("GET", path, "")
+	resource, err := widget.api("GET")
 	if err != nil {
 		return nil, err
 	}
 
-	err = json.Unmarshal([]byte(resource.Raw), TicketStruct)
+	err = json.Unmarshal([]byte(resource.Raw), tickets)
 	if err != nil {
 		return nil, err
 	}
 
-	return TicketStruct, err
+	return tickets, err
 }
 
 func (widget *Widget) newTickets() (*TicketArray, error) {
