@@ -24,10 +24,10 @@ func NewTextWidget(tviewApp *tview.Application, redrawChan chan bool, pages *tvi
 	}
 
 	widget.View = widget.createView(widget.bordered)
-	widget.View.SetInputCapture(widget.KeyboardWidget.InputCapture)
+	widget.View.SetInputCapture(widget.InputCapture)
 
-	widget.Base.SetView(widget.View)
-	widget.Base.helpTextFunc = widget.KeyboardWidget.HelpText
+	widget.SetView(widget.View)
+	widget.helpTextFunc = widget.HelpText
 
 	return widget
 }
@@ -48,7 +48,11 @@ func (widget *TextWidget) Redraw(data func() (string, string, bool)) {
 	widget.View.SetTitle(widget.ContextualTitle(title))
 	widget.View.SetText(strings.TrimRight(content, "\n"))
 
-	widget.RedrawChan <- true
+	// Non-blocking send to avoid deadlock when multiple widgets refresh simultaneously
+	select {
+	case widget.RedrawChan <- true:
+	default:
+	}
 }
 
 /* -------------------- Unexported Functions -------------------- */
@@ -56,12 +60,12 @@ func (widget *TextWidget) Redraw(data func() (string, string, bool)) {
 func (widget *TextWidget) createView(bordered bool) *tview.TextView {
 	view := tview.NewTextView()
 
-	view.SetBackgroundColor(wtf.ColorFor(widget.commonSettings.Colors.WidgetTheme.Background))
+	view.SetBackgroundColor(wtf.ColorFor(widget.commonSettings.Colors.Background))
 	view.SetBorder(bordered)
 	view.SetBorderColor(wtf.ColorFor(widget.BorderColor()))
 	view.SetDynamicColors(true)
-	view.SetTextColor(wtf.ColorFor(widget.commonSettings.Colors.TextTheme.Text))
-	view.SetTitleColor(wtf.ColorFor(widget.commonSettings.Colors.TextTheme.Title))
+	view.SetTextColor(wtf.ColorFor(widget.commonSettings.Colors.Text))
+	view.SetTitleColor(wtf.ColorFor(widget.commonSettings.Colors.Title))
 	view.SetWrap(false)
 
 	return view

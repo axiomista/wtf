@@ -3,11 +3,13 @@ package resourceusage
 import (
 	"github.com/olebedev/config"
 	"github.com/wtfutil/wtf/cfg"
+	"github.com/wtfutil/wtf/utils"
 )
 
 const (
-	defaultFocusable = false
-	defaultTitle     = "ResourceUsage"
+	defaultFocusable       = false
+	defaultRefreshInterval = "1s"
+	defaultTitle           = "ResourceUsage"
 )
 
 type Settings struct {
@@ -28,6 +30,11 @@ func NewSettingsFromYAML(name string, ymlConfig *config.Config, globalConfig *co
 		showMem:     ymlConfig.UBool("showMem", true),
 		showSwp:     ymlConfig.UBool("showSwp", true),
 	}
+	settings.RefreshInterval = cfg.ParseTimeString(ymlConfig, "refreshInterval", defaultRefreshInterval)
 
 	return &settings
+}
+
+func (widget *Widget) ConfigText() string {
+	return utils.HelpFromInterface(Settings{})
 }

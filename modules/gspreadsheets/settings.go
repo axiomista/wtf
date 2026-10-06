@@ -3,6 +3,7 @@ package gspreadsheets
 import (
 	"github.com/olebedev/config"
 	"github.com/wtfutil/wtf/cfg"
+	"github.com/wtfutil/wtf/utils"
 )
 
 const (
@@ -34,9 +35,13 @@ func NewSettingsFromYAML(name string, ymlConfig *config.Config, globalConfig *co
 		sheetID:    ymlConfig.UString("sheetId"),
 	}
 
-	settings.colors.values = ymlConfig.UString("colors.values", "green")
+	settings.values = ymlConfig.UString("colors.values", "green")
 
 	settings.SetDocumentationPath("google/spreadsheet")
 
 	return &settings
+}
+
+func (widget *Widget) ConfigText() string {
+	return utils.HelpFromInterface(Settings{})
 }

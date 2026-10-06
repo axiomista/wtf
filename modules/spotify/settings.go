@@ -3,6 +3,7 @@ package spotify
 import (
 	"github.com/olebedev/config"
 	"github.com/wtfutil/wtf/cfg"
+	"github.com/wtfutil/wtf/utils"
 )
 
 const (
@@ -25,8 +26,12 @@ func NewSettingsFromYAML(name string, ymlConfig *config.Config, globalConfig *co
 		Common: cfg.NewCommonSettingsFromModule(name, defaultTitle, defaultFocusable, ymlConfig, globalConfig),
 	}
 
-	settings.colors.label = ymlConfig.UString("colors.label", "green")
-	settings.colors.text = ymlConfig.UString("colors.text", "white")
+	settings.label = ymlConfig.UString("colors.label", "green")
+	settings.text = ymlConfig.UString("colors.text", "white")
 
 	return &settings
+}
+
+func (widget *Widget) ConfigText() string {
+	return utils.HelpFromInterface(Settings{})
 }

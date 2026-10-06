@@ -11,6 +11,7 @@ import (
 	"github.com/olebedev/config"
 	"github.com/radovskyb/watcher"
 	"github.com/rivo/tview"
+
 	"github.com/wtfutil/wtf/cfg"
 	"github.com/wtfutil/wtf/support"
 	"github.com/wtfutil/wtf/utils"
@@ -30,6 +31,7 @@ type WtfApp struct {
 	pages          *tview.Pages
 	validator      *ModuleValidator
 	widgets        []wtf.Wtfable
+	configWatcher  *watcher.Watcher
 
 	// The redrawChan channel is used to allow modules to signal back to the main loop that
 	// the screen needs to be explicitly redrawn, instead of waiting for tcell to redraw
@@ -72,9 +74,9 @@ func NewWtfApp(tviewApp *tview.Application, config *config.Config, configFilePat
 	wtfApp.validator.Validate(wtfApp.widgets)
 
 	firstWidget := wtfApp.widgets[0]
-	wtfApp.pages.Box.SetBackgroundColor(
+	wtfApp.pages.SetBackgroundColor(
 		wtf.ColorFor(
-			firstWidget.CommonSettings().Colors.WidgetTheme.Background,
+			firstWidget.CommonSettings().Colors.Background,
 		),
 	)
 
@@ -93,7 +95,10 @@ func handleRedraws(tviewApp *tview.Application, redrawChan chan bool) {
 	}
 
 	for {
-		data := <-redrawChan
+		data, ok := <-redrawChan
+		if !ok {
+			return
+		}
 
 		if data {
 			tviewApp.Draw()
@@ -132,6 +137,9 @@ func (wtfApp *WtfApp) Start() {
 // Stop kills all the currently-running widgets in this app
 func (wtfApp *WtfApp) Stop() {
 	wtfApp.stopAllWidgets()
+	if wtfApp.configWatcher != nil {
+		wtfApp.configWatcher.Close()
+	}
 	close(wtfApp.redrawChan)
 }
 
@@ -147,9 +155,7 @@ func (wtfApp *WtfApp) keyboardIntercept(event *tcell.EventKey) *tcell.EventKey {
 	// These keys are global keys used by the app. Widgets should not implement these keys
 	switch event.Key() {
 	case tcell.KeyCtrlC:
-		wtfApp.Stop()
-		wtfApp.TViewApp.Stop()
-		wtfApp.DisplayExitMessage()
+		wtfApp.Exit()
 	case tcell.KeyCtrlR:
 		wtfApp.refreshAllWidgets()
 		return nil
@@ -199,7 +205,8 @@ func (wtfApp *WtfApp) scheduleWidgets() {
 }
 
 func (wtfApp *WtfApp) watchForConfigChanges() {
-	watch := watcher.New()
+	wtfApp.configWatcher = watcher.New()
+	watch := wtfApp.configWatcher
 
 	// Notify write events
 	watch.FilterOps(watcher.Write)

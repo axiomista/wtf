@@ -1,21 +1,21 @@
 package app
 
 import (
+	"runtime/debug"
+	"time"
+
 	"github.com/olebedev/config"
 	"github.com/rivo/tview"
 	"github.com/wtfutil/wtf/modules/airbrake"
 	"github.com/wtfutil/wtf/modules/asana"
 	"github.com/wtfutil/wtf/modules/azuredevops"
+	"github.com/wtfutil/wtf/modules/azurelogs"
 	"github.com/wtfutil/wtf/modules/bamboohr"
 	"github.com/wtfutil/wtf/modules/bargraph"
 	"github.com/wtfutil/wtf/modules/buildkite"
-	cdsfavorites "github.com/wtfutil/wtf/modules/cds/favorites"
-	cdsqueue "github.com/wtfutil/wtf/modules/cds/queue"
-	cdsstatus "github.com/wtfutil/wtf/modules/cds/status"
 	"github.com/wtfutil/wtf/modules/circleci"
 	"github.com/wtfutil/wtf/modules/clocks"
 	"github.com/wtfutil/wtf/modules/cmdrunner"
-	"github.com/wtfutil/wtf/modules/covid"
 	"github.com/wtfutil/wtf/modules/cryptocurrency/bittrex"
 	"github.com/wtfutil/wtf/modules/cryptocurrency/blockfolio"
 	"github.com/wtfutil/wtf/modules/cryptocurrency/cryptolive"
@@ -56,6 +56,8 @@ import (
 	"github.com/wtfutil/wtf/modules/oura"
 	"github.com/wtfutil/wtf/modules/pagerduty"
 	"github.com/wtfutil/wtf/modules/pihole"
+	"github.com/wtfutil/wtf/modules/ping"
+	"github.com/wtfutil/wtf/modules/pivotal"
 	"github.com/wtfutil/wtf/modules/pocket"
 	"github.com/wtfutil/wtf/modules/power"
 	"github.com/wtfutil/wtf/modules/progress"
@@ -70,6 +72,7 @@ import (
 	"github.com/wtfutil/wtf/modules/stocks/finnhub"
 	"github.com/wtfutil/wtf/modules/stocks/yfinance"
 	"github.com/wtfutil/wtf/modules/subreddit"
+	"github.com/wtfutil/wtf/modules/system"
 	"github.com/wtfutil/wtf/modules/textfile"
 	"github.com/wtfutil/wtf/modules/todo"
 	"github.com/wtfutil/wtf/modules/todo_plus"
@@ -80,6 +83,7 @@ import (
 	"github.com/wtfutil/wtf/modules/twitterstats"
 	"github.com/wtfutil/wtf/modules/unknown"
 	"github.com/wtfutil/wtf/modules/updown"
+	"github.com/wtfutil/wtf/modules/uptimekuma"
 	"github.com/wtfutil/wtf/modules/uptimerobot"
 	"github.com/wtfutil/wtf/modules/urlcheck"
 	"github.com/wtfutil/wtf/modules/victorops"
@@ -87,6 +91,7 @@ import (
 	"github.com/wtfutil/wtf/modules/weatherservices/prettyweather"
 	"github.com/wtfutil/wtf/modules/weatherservices/weather"
 	"github.com/wtfutil/wtf/modules/zendesk"
+	"github.com/wtfutil/wtf/utils"
 	"github.com/wtfutil/wtf/wtf"
 )
 
@@ -126,6 +131,9 @@ func MakeWidget(
 	case "azuredevops":
 		settings := azuredevops.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = azuredevops.NewWidget(tviewApp, redrawChan, pages, settings)
+	case "azurelogs":
+		settings := azurelogs.NewSettingsFromYAML(moduleName, moduleConfig, config)
+		widget = azurelogs.NewWidget(tviewApp, redrawChan, pages, settings)
 	case "bamboohr":
 		settings := bamboohr.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = bamboohr.NewWidget(tviewApp, redrawChan, settings)
@@ -141,24 +149,12 @@ func MakeWidget(
 	case "buildkite":
 		settings := buildkite.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = buildkite.NewWidget(tviewApp, redrawChan, pages, settings)
-	case "cdsFavorites":
-		settings := cdsfavorites.NewSettingsFromYAML(moduleName, moduleConfig, config)
-		widget = cdsfavorites.NewWidget(tviewApp, redrawChan, pages, settings)
-	case "cdsQueue":
-		settings := cdsqueue.NewSettingsFromYAML(moduleName, moduleConfig, config)
-		widget = cdsqueue.NewWidget(tviewApp, redrawChan, pages, settings)
-	case "cdsStatus":
-		settings := cdsstatus.NewSettingsFromYAML(moduleName, moduleConfig, config)
-		widget = cdsstatus.NewWidget(tviewApp, redrawChan, pages, settings)
 	case "circleci":
 		settings := circleci.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = circleci.NewWidget(tviewApp, redrawChan, settings)
 	case "clocks":
 		settings := clocks.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = clocks.NewWidget(tviewApp, redrawChan, settings)
-	case "covid":
-		settings := covid.NewSettingsFromYAML(moduleName, moduleConfig, config)
-		widget = covid.NewWidget(tviewApp, redrawChan, settings)
 	case "cmdrunner":
 		settings := cmdrunner.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = cmdrunner.NewWidget(tviewApp, redrawChan, settings)
@@ -246,12 +242,12 @@ func MakeWidget(
 	case "logger":
 		settings := logger.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = logger.NewWidget(tviewApp, redrawChan, settings)
+	case "lunarphase":
+		settings := lunarphase.NewSettingsFromYAML(moduleName, moduleConfig, config)
+		widget = lunarphase.NewWidget(tviewApp, redrawChan, pages, settings)
 	case "mercurial":
 		settings := mercurial.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = mercurial.NewWidget(tviewApp, redrawChan, pages, settings)
-	case "lunarphase":
-		settings := lunarphase.NewSettingsFromYAML(moduleName, moduleConfig, config)
-		widget = lunarphase.NewWidget(tviewApp, redrawChan, settings)
 	case "mempool":
 		settings := mempool.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = mempool.NewWidget(tviewApp, redrawChan, pages, settings)
@@ -276,6 +272,9 @@ func MakeWidget(
 	case "pihole":
 		settings := pihole.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = pihole.NewWidget(tviewApp, redrawChan, pages, settings)
+	case "ping":
+		settings := ping.NewSettingsFromYAML(moduleName, moduleConfig, config)
+		widget = ping.NewWidget(tviewApp, redrawChan, settings)
 	case "power":
 		settings := power.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = power.NewWidget(tviewApp, redrawChan, settings)
@@ -315,6 +314,9 @@ func MakeWidget(
 	case "subreddit":
 		settings := subreddit.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = subreddit.NewWidget(tviewApp, redrawChan, pages, settings)
+	case "system":
+		settings := system.NewSettingsFromYAML(moduleName, moduleConfig, config)
+		widget = system.NewWidget(tviewApp, redrawChan, buildDate(), buildVersion(), settings)
 	case "textfile":
 		settings := textfile.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = textfile.NewWidget(tviewApp, redrawChan, pages, settings)
@@ -348,6 +350,9 @@ func MakeWidget(
 	case "updown":
 		settings := updown.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = updown.NewWidget(tviewApp, redrawChan, pages, settings)
+	case "uptimekuma":
+		settings := uptimekuma.NewSettingsFromYAML(moduleName, moduleConfig, config)
+		widget = uptimekuma.NewWidget(tviewApp, redrawChan, pages, settings)
 	case "uptimerobot":
 		settings := uptimerobot.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = uptimerobot.NewWidget(tviewApp, redrawChan, pages, settings)
@@ -363,6 +368,9 @@ func MakeWidget(
 	case "zendesk":
 		settings := zendesk.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = zendesk.NewWidget(tviewApp, redrawChan, pages, settings)
+	case "pivotal":
+		settings := pivotal.NewSettingsFromYAML(moduleName, moduleConfig, config)
+		widget = pivotal.NewWidget(tviewApp, redrawChan, pages, settings)
 	case "finnhub":
 		settings := finnhub.NewSettingsFromYAML(moduleName, moduleConfig, config)
 		widget = finnhub.NewWidget(tviewApp, redrawChan, settings)
@@ -392,4 +400,42 @@ func MakeWidgets(tviewApp *tview.Application, pages *tview.Pages, config *config
 	}
 
 	return widgets
+}
+
+// buildVersion returns the module version reported by the Go build system,
+// falling back to "unknown" when build info is unavailable (e.g. `go run`).
+func buildVersion() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "unknown"
+	}
+
+	return info.Main.Version
+}
+
+// buildDate returns the VCS commit timestamp reported by the Go build
+// system, formatted for system.Widget, falling back to the current time
+// when build info or VCS timestamp data is unavailable.
+func buildDate() string {
+	now := time.Now().Format(utils.TimestampFormat)
+
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return now
+	}
+
+	for _, setting := range info.Settings {
+		if setting.Key != "vcs.time" {
+			continue
+		}
+
+		parsed, err := time.Parse(time.RFC3339, setting.Value)
+		if err != nil {
+			return now
+		}
+
+		return parsed.Format(utils.TimestampFormat)
+	}
+
+	return now
 }

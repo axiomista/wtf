@@ -16,8 +16,8 @@ import (
 
 // Flags is the container for command line flag data
 type Flags struct {
-	Config  string `short:"c" long:"config" optional:"yes" description:"Path to config file"`
-	Module  string `short:"m" long:"module" optional:"yes" description:"Display info about a specific module, i.e.: 'wtfutil -m=todo'"`
+	Config  string `short:"c" long:"config" optional:"no" description:"Path to config file"`
+	Module  string `short:"m" long:"module" optional:"no" description:"Display info about a specific module, i.e.: 'wtfutil -m=todo'"`
 	Profile bool   `short:"p" long:"profile" optional:"yes" description:"Profile application memory usage"`
 	Version bool   `short:"v" long:"version" description:"Show version info"`
 	// Work-around go-flags misfeatures. If any sub-command is defined
@@ -62,17 +62,41 @@ func (flags *Flags) RenderIf(config *config.Config) {
 	}
 
 	if flags.HasVersion() {
-		info, _ := debug.ReadBuildInfo()
-		version := "dev"
-		date := "now"
+
+		info, ok := debug.ReadBuildInfo()
+		if !ok {
+			os.Exit(1)
+			return
+		}
+
+		var official bool
+		var revision string
+		version := info.Main.Version
+		date := "unknown"
+
+		// Check if this binary was built with git. If so, extract details.
 		for _, setting := range info.Settings {
-			if setting.Key == "vcs.revision" {
-				version = setting.Value
-			} else if setting.Key == "vcs.time" {
+			switch setting.Key {
+			case "vcs.revision":
+				revision = setting.Value[0:12] // only need the 12 char hash
+			case "vcs.time":
 				date = setting.Value
 			}
 		}
-		fmt.Printf("%s (%s)\n", version, date)
+
+		// if we're built with git...
+		if revision != "" {
+			if !strings.Contains(version, revision) {
+				official = true
+			}
+		}
+
+		if official {
+			fmt.Printf("WTF %s (built: %s)\n", version, date)
+		} else {
+			fmt.Printf("WTF %s\nNote: This is an unofficial release.\n", version)
+		}
+
 		os.Exit(0)
 	}
 
@@ -161,11 +185,18 @@ func (flags *Flags) Parse() {
 		return
 	}
 
-	// If no config file is explicitly passed in as a param then set the flag to the default config file
+	// If no config file is explicitly passed in as a param
+	// then try the `WTF_CONFIG` environment variable
+	// then fallback to the default config file to define the default flag value
 	configDir, err := cfg.WtfConfigDir()
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
-	flags.Config = filepath.Join(configDir, "config.yml")
+	envCfg := os.Getenv("WTF_CONFIG")
+	if envCfg == "" {
+		flags.Config = filepath.Join(configDir, "config.yml")
+	} else {
+		flags.Config = envCfg
+	}
 }

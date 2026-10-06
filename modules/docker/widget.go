@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/docker/docker/client"
-	"github.com/pkg/errors"
 	"github.com/rivo/tview"
 	"github.com/wtfutil/wtf/view"
 )
@@ -13,6 +12,7 @@ type Widget struct {
 	view.TextWidget
 	cli           *client.Client
 	settings      *Settings
+	pidFilePath   string
 	displayBuffer string
 }
 
@@ -24,11 +24,12 @@ func NewWidget(tviewApp *tview.Application, redrawChan chan bool, pages *tview.P
 
 	widget.View.SetScrollable(true)
 
-	cli, err := client.NewClientWithOpts()
+	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		widget.displayBuffer = errors.Wrap(err, "could not create client").Error()
+		widget.displayBuffer = fmt.Errorf("could not create client: %w", err).Error()
 	} else {
 		widget.cli = cli
+		widget.pidFilePath = resolvePidFilePath(settings.pidFilePath, cli.DaemonHost())
 	}
 
 	widget.refreshDisplayBuffer()
@@ -51,6 +52,11 @@ func (widget *Widget) display() (string, string, bool) {
 
 func (widget *Widget) refreshDisplayBuffer() {
 	if widget.cli == nil {
+		return
+	}
+
+	if running, known := daemonIsRunning(widget.pidFilePath); known && !running {
+		widget.displayBuffer = fmt.Sprintf("[%s] docker daemon is not running[white]\n", widget.settings.Colors.Subheading)
 		return
 	}
 

@@ -3,14 +3,13 @@ package cmdrunner
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
 	"sync"
 
-	"github.com/creack/pty"
 	"github.com/rivo/tview"
+	"github.com/wtfutil/wtf/utils"
 	"github.com/wtfutil/wtf/view"
 )
 
@@ -122,9 +121,9 @@ func runCommandLoop(widget *Widget) {
 	for {
 		<-widget.runChan
 		widget.resetBuffer()
-		cmd := exec.Command(widget.settings.cmd, widget.settings.args...)
+		cmd := exec.Command(expandTilde(widget.settings.cmd), expandTildes(widget.settings.args)...)
 		cmd.Env = widget.environment()
-		cmd.Dir = widget.settings.workingDir
+		cmd.Dir = expandTilde(widget.settings.workingDir)
 		var err error
 		if widget.settings.pty {
 			err = runCommandPty(widget, cmd)
@@ -138,23 +137,30 @@ func runCommandLoop(widget *Widget) {
 	}
 }
 
+// expandTilde expands a leading `~` in path to the user's home directory.
+// exec.Command does not invoke a shell, so this expansion never happens on
+// its own. If expansion fails for any reason, the original value is
+// returned unchanged.
+func expandTilde(path string) string {
+	expanded, err := utils.ExpandHomeDir(path)
+	if err != nil {
+		return path
+	}
+	return expanded
+}
+
+// expandTildes applies expandTilde to every element of paths.
+func expandTildes(paths []string) []string {
+	expanded := make([]string, len(paths))
+	for i, path := range paths {
+		expanded[i] = expandTilde(path)
+	}
+	return expanded
+}
+
 func runCommand(widget *Widget, cmd *exec.Cmd) error {
 	cmd.Stdout = widget
 	return cmd.Run()
-}
-
-func runCommandPty(widget *Widget, cmd *exec.Cmd) error {
-	f, err := pty.Start(cmd)
-	// The command has exited, print any error messages
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(widget.buffer, f)
-	if err != nil {
-		return err
-	}
-	return cmd.Wait()
 }
 
 func (widget *Widget) handleError(err error) {

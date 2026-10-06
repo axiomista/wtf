@@ -29,12 +29,13 @@ type Settings struct {
 	colors
 
 	feeds           []string        `help:"An array of RSS and Atom feed URLs"`
+	aliases         []string        `help:"An array of feed name aliases (should be the same length as feeds)"`
 	feedLimit       int             `help:"The maximum number of stories to display for each feed"`
-	showSource      bool            `help:"Wether or not to show feed source in front of item titles." values:"true or false" optional:"true" default:"true"`
-	showPublishDate bool            `help:"Wether or not to show publish date in front of item titles." values:"true or false" optional:"true" default:"false"`
+	showSource      bool            `help:"Whether or not to show feed source in front of item titles." values:"true or false" optional:"true" default:"true"`
+	showPublishDate bool            `help:"Whether or not to show publish date in front of item titles." values:"true or false" optional:"true" default:"false"`
 	dateFormat      string          `help:"Date format to use for publish dates" values:"Any valid Go time layout which is handled by Time.Format" optional:"true" default:"Jan 02"`
 	credentials     map[string]auth `help:"Map of private feed URLs with required authentication credentials"`
-	disableHTTP2    bool            `help:"Wether or not to use the HTTP/2 protocol. Certain sites, such as reddit.com, will not work unless HTTP/2 is disabled." values:"true or false" optional:"true" default:"false"`
+	disableHTTP2    bool            `help:"Whether or not to use the HTTP/2 protocol. Certain sites, such as reddit.com, will not work unless HTTP/2 is disabled." values:"true or false" optional:"true" default:"false"`
 	userAgent       string          `help:"HTTP User-Agent to use when fetching RSS feeds." optional:"true"`
 }
 
@@ -43,6 +44,7 @@ func NewSettingsFromYAML(name string, ymlConfig, globalConfig *config.Config) *S
 	settings := &Settings{
 		Common:          cfg.NewCommonSettingsFromModule(name, defaultTitle, defaultFocusable, ymlConfig, globalConfig),
 		feeds:           utils.ToStrs(ymlConfig.UList("feeds")),
+		aliases:         utils.ToStrs(ymlConfig.UList("aliases")),
 		feedLimit:       ymlConfig.UInt("feedLimit", -1),
 		showSource:      ymlConfig.UBool("showSource", true),
 		showPublishDate: ymlConfig.UBool("showPublishDate", false),
@@ -52,8 +54,8 @@ func NewSettingsFromYAML(name string, ymlConfig, globalConfig *config.Config) *S
 		userAgent:       ymlConfig.UString("userAgent", "wtfutil (https://github.com/wtfutil/wtf)"),
 	}
 
-	settings.colors.source = ymlConfig.UString("colors.source", "green")
-	settings.colors.publishDate = ymlConfig.UString("colors.publishDate", "orange")
+	settings.source = ymlConfig.UString("colors.source", "green")
+	settings.publishDate = ymlConfig.UString("colors.publishDate", "orange")
 
 	// If feeds cannot be parsed as list try parsing as a map with username+password fields
 	if len(settings.feeds) == 0 {
@@ -85,4 +87,8 @@ func NewSettingsFromYAML(name string, ymlConfig, globalConfig *config.Config) *S
 	}
 
 	return settings
+}
+
+func (widget *Widget) ConfigText() string {
+	return utils.HelpFromInterface(Settings{})
 }

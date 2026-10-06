@@ -63,10 +63,10 @@ func (base *Base) Bordered() bool {
 // BorderColor returns the color that the border of this widget should be drawn in
 func (base *Base) BorderColor() string {
 	if base.Focusable() {
-		return base.commonSettings.Colors.BorderTheme.Focusable
+		return base.commonSettings.Colors.Focusable
 	}
 
-	return base.commonSettings.Colors.BorderTheme.Unfocusable
+	return base.commonSettings.Colors.Unfocusable
 }
 
 func (base *Base) CommonSettings() *cfg.Common {
@@ -164,8 +164,11 @@ func (base *Base) ShowHelp() {
 	base.pages.AddPage("help", modal, false, true)
 	base.tviewApp.SetFocus(modal)
 
-	// Tell the app to force redraw the screen
-	base.RedrawChan <- true
+	// Tell the app to force redraw the screen (non-blocking to avoid deadlock)
+	select {
+	case base.RedrawChan <- true:
+	default:
+	}
 }
 
 func (base *Base) Stop() {

@@ -5,17 +5,17 @@ import (
 	"os"
 	"strings"
 
-	"github.com/logrusorgru/aurora"
+	"github.com/logrusorgru/aurora/v4"
 	"github.com/olebedev/config"
 )
 
 const exitMessageHeader = `
-	      ____    __    ____ .___________. _______
-	      \   \  /  \  /   / |           ||   ____|
-	       \   \/    \/   /  ----|  |-----|  |__
-	        \            /       |  |     |   __|
-	         \    /\    /        |  |     |  |
-	          \__/  \__/         |__|     |__|
+   _______ ______  _____  _____  ______ _____           
+  |__   __|  ____|/ ____|/ ____||  ____|  __ \     /\   
+     | |  | |__  | (___ | (___  | |__  | |__) |   /  \  
+     | |  |  __|  \___ \ \___ \ |  __| |  _  /   / /\ \ 
+     | |  | |____ ____) |____) || |____| | \ \  / ____ \
+     |_|  |______|_____/|_____/ |______|_|  \_\/_/    \_\
 
     the personal information dashboard for your terminal
 `
@@ -97,8 +97,9 @@ func (wtfApp *WtfApp) sponsorThankYouMessage() string {
 }
 
 func (wtfApp *WtfApp) supportRequestMessage() string {
-	str := "    The development and maintenance of WTF is supported by sponsorships.\n"
-	str += fmt.Sprintf("    Sponsor the development of WTF at %s\n", aurora.Green("https://github.com/sponsors/senorprogrammer"))
+	str := "    Heads up! WTF is being renamed to Tessera. Stay tuned!\n\n"
+	str += "    The development and maintenance of WTF is supported by sponsorships.\n"
+	str += fmt.Sprintf("    Sponsor the development of WTF at %s\n", aurora.Green("https://github.com/sponsors/FelicianoTech"))
 
 	return str
 }

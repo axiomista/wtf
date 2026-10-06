@@ -1,0 +1,24 @@
+name: "PR Checks"
+
+on:
+  pull_request:
+    branches:
+      - trunk
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v7.0.0
+        with:
+          fetch-depth: 0
+      - name: "Set up Go"
+        uses: actions/setup-go@v6.5.0
+        with:
+          go-version-file: 'go.mod'
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v7.2.2
+        with:
+          version: 2.15.3
+          args: release --snapshot

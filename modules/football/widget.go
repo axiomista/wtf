@@ -42,9 +42,10 @@ func NewWidget(tviewApp *tview.Application, redrawChan chan bool, pages *tview.P
 	leagueId, err := getLeague(settings.league)
 	if err != nil {
 		widget = Widget{
-			err:      fmt.Errorf("unable to get the league id for provided league '%s'", settings.league),
-			Client:   NewClient(settings.apiKey),
-			settings: settings,
+			TextWidget: view.NewTextWidget(tviewApp, redrawChan, pages, settings.Common),
+			err:        fmt.Errorf("unable to get the league id for provided league '%s'", settings.league),
+			Client:     NewClient(settings.apiKey),
+			settings:   settings,
 		}
 
 		return &widget
@@ -95,7 +96,7 @@ func (widget *Widget) GetStandings(leagueId int) string {
 	content += "Standings:\n\n"
 	buf := new(bytes.Buffer)
 	tStandings := createTable([]string{"No.", "Team", "MP", "Won", "Draw", "Lost", "GD", "Points"}, buf)
-	resp, err := widget.Client.footballRequest("standings", leagueId)
+	resp, err := widget.footballRequest("standings", leagueId)
 	if err != nil {
 		return fmt.Sprintf("Error fetching standings: %s", err.Error())
 	}
@@ -110,7 +111,7 @@ func (widget *Widget) GetStandings(leagueId int) string {
 	}
 
 	if len(l.Standings) == 0 {
-		return "Error fetching standings"
+		return "No standings found for this competition"
 	}
 
 	for _, i := range l.Standings[0].Table {
@@ -141,7 +142,7 @@ func (widget *Widget) GetMatches(leagueId int) string {
 	to := getDateString(widget.settings.matchesTo)
 
 	requestPath := fmt.Sprintf("matches?dateFrom=%s&dateTo=%s", from, to)
-	resp, err := widget.Client.footballRequest(requestPath, leagueId)
+	resp, err := widget.footballRequest(requestPath, leagueId)
 	if err != nil {
 		return fmt.Sprintf("Error fetching matches: %s", err.Error())
 	}
@@ -156,17 +157,18 @@ func (widget *Widget) GetMatches(leagueId int) string {
 	}
 
 	if len(l.Matches) == 0 {
-		return "Error fetching matches"
+		return fmt.Sprintf("No matches found between %s and %s", from, to)
 	}
 
 	for _, m := range l.Matches {
 
 		widget.markFavorite(&m)
 
-		if m.Status == "SCHEDULED" {
+		switch m.Status {
+		case "SCHEDULED":
 			row := []string{m.HomeTeam.Name, "🆚", m.AwayTeam.Name, parseDateString(m.Date)}
 			tScheduled.Append(row)
-		} else if m.Status == "FINISHED" {
+		case "FINISHED":
 			row := []string{m.HomeTeam.Name, strconv.Itoa(m.Score.FullTime.HomeTeam), "🆚", m.AwayTeam.Name, strconv.Itoa(m.Score.FullTime.AwayTeam)}
 			tPlayed.Append(row)
 		}

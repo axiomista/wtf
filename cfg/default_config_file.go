@@ -51,7 +51,7 @@ const defaultConfigFile = `wtf:
     feedreader:
       enabled: true
       feeds:
-      - http://feeds.bbci.co.uk/news/rss.xml
+      - https://feeds.bbci.co.uk/news/rss.xml
       feedLimit: 10
       position:
         top: 1
@@ -91,7 +91,7 @@ const defaultConfigFile = `wtf:
       refreshInterval: 30
       wrapText: false
     uptime:
-      args: [""]
+      args: []
       cmd: "uptime"
       enabled: true
       position:

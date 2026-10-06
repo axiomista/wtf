@@ -31,12 +31,31 @@ type FeedItem struct {
 	viewed      bool
 }
 
+// feedParser abstracts feed parsing to allow testing without network calls
+type feedParser interface {
+	ParseURL(feedURL string) (*gofeed.Feed, error)
+	SetAuth(auth *gofeed.Auth)
+}
+
+// gofeedParser wraps gofeed.Parser to implement feedParser
+type gofeedParser struct {
+	parser *gofeed.Parser
+}
+
+func (p *gofeedParser) ParseURL(feedURL string) (*gofeed.Feed, error) {
+	return p.parser.ParseURL(feedURL)
+}
+
+func (p *gofeedParser) SetAuth(auth *gofeed.Auth) {
+	p.parser.AuthConfig = auth
+}
+
 // Widget is the container for RSS and Atom data
 type Widget struct {
 	view.ScrollableWidget
 
 	stories  []*FeedItem
-	parser   *gofeed.Parser
+	parser   feedParser
 	settings *Settings
 	err      error
 	showType ShowType
@@ -79,7 +98,7 @@ func NewWidget(tviewApp *tview.Application, redrawChan chan bool, pages *tview.P
 	widget := &Widget{
 		ScrollableWidget: view.NewScrollableWidget(tviewApp, redrawChan, pages, settings.Common),
 
-		parser:   parser,
+		parser:   &gofeedParser{parser: parser},
 		settings: settings,
 		showType: SHOW_TITLE,
 	}
@@ -93,11 +112,25 @@ func NewWidget(tviewApp *tview.Application, redrawChan chan bool, pages *tview.P
 /* -------------------- Exported Functions -------------------- */
 
 // Fetch retrieves RSS and Atom feed data
-func (widget *Widget) Fetch(feedURLs []string) ([]*FeedItem, error) {
+func (widget *Widget) Fetch(feedURLs, aliases []string) ([]*FeedItem, error) {
+
 	var data []*FeedItem
 
-	for _, feedURL := range feedURLs {
-		feedItems, err := widget.fetchForFeed(feedURL)
+	// Allows us to right-pad alias so that the column lines up.
+	var aliasMaxChar int
+	for _, alias := range aliases {
+		aliasMaxChar = max(aliasMaxChar, len(alias))
+	}
+
+	for i, feedURL := range feedURLs {
+
+		var alias string
+
+		if aliases != nil && i < len(aliases) {
+			alias = fmt.Sprintf("%-*s", aliasMaxChar, aliases[i])
+		}
+
+		feedItems, err := widget.fetchForFeed(feedURL, alias)
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +145,7 @@ func (widget *Widget) Fetch(feedURLs []string) ([]*FeedItem, error) {
 
 // Refresh updates the data in the widget
 func (widget *Widget) Refresh() {
-	feedItems, err := widget.Fetch(widget.settings.feeds)
+	feedItems, err := widget.Fetch(widget.settings.feeds, widget.settings.aliases)
 	if err != nil {
 		widget.err = err
 		widget.stories = nil
@@ -133,18 +166,18 @@ func (widget *Widget) Render() {
 
 /* -------------------- Unexported Functions -------------------- */
 
-func (widget *Widget) fetchForFeed(feedURL string) ([]*FeedItem, error) {
+func (widget *Widget) fetchForFeed(feedURL, alias string) ([]*FeedItem, error) {
 	var (
 		feed *gofeed.Feed
 		err  error
 	)
 	if auth, isPrivateRSS := widget.settings.credentials[feedURL]; isPrivateRSS {
-		widget.parser.AuthConfig = &gofeed.Auth{
+		widget.parser.SetAuth(&gofeed.Auth{
 			Username: auth.username,
 			Password: auth.password,
-		}
+		})
 		feed, err = widget.parser.ParseURL(feedURL)
-		widget.parser.AuthConfig = nil
+		widget.parser.SetAuth(nil)
 	} else {
 		feed, err = widget.parser.ParseURL(feedURL)
 	}
@@ -166,6 +199,9 @@ func (widget *Widget) fetchForFeed(feedURL string) ([]*FeedItem, error) {
 			item:        gofeedItem,
 			sourceTitle: feed.Title,
 			viewed:      false,
+		}
+		if alias != "" {
+			feedItem.sourceTitle = alias
 		}
 
 		feedItems = append(feedItems, feedItem)
@@ -192,7 +228,7 @@ func (widget *Widget) content() (string, string, bool) {
 			// Grays out viewed items in the list, while preserving background highlighting when selected
 			rowColor = "gray"
 			if idx == widget.Selected {
-				rowColor = fmt.Sprintf("gray:%s", widget.settings.Colors.RowTheme.HighlightedBackground)
+				rowColor = fmt.Sprintf("gray:%s", widget.settings.Colors.HighlightedBackground)
 			}
 		}
 
@@ -222,10 +258,10 @@ func (widget *Widget) getShowText(feedItem *FeedItem, rowColor string) string {
 	title := space.ReplaceAllString(feedItem.item.Title, " ")
 
 	if widget.settings.showSource && feedItem.sourceTitle != "" {
-		source = "[" + widget.settings.colors.source + "]" + feedItem.sourceTitle + " "
+		source = "[" + widget.settings.source + "]" + feedItem.sourceTitle + " "
 	}
 	if widget.settings.showPublishDate && feedItem.item.Published != "" {
-		publishDate = "[" + widget.settings.colors.publishDate + "]" + feedItem.item.PublishedParsed.Format(widget.settings.dateFormat) + " "
+		publishDate = "[" + widget.settings.publishDate + "]" + feedItem.item.PublishedParsed.Format(widget.settings.dateFormat) + " "
 	}
 
 	// Convert any escaped characters to their character representation

@@ -3,6 +3,7 @@ package gcal
 import (
 	"github.com/olebedev/config"
 	"github.com/wtfutil/wtf/cfg"
+	"github.com/wtfutil/wtf/utils"
 )
 
 const (
@@ -62,8 +63,8 @@ func NewSettingsFromYAML(name string, ymlConfig *config.Config, globalConfig *co
 		calendarReadLevel:     ymlConfig.UString("calendarReadLevel", "writer"),
 	}
 
-	settings.colors.day = ymlConfig.UString("colors.day", settings.Colors.Subheading)
-	settings.colors.description = ymlConfig.UString("colors.description", "white")
+	settings.day = ymlConfig.UString("colors.day", settings.Colors.Subheading)
+	settings.description = ymlConfig.UString("colors.description", "white")
 
 	// settings.colors.eventTime is a new feature introduced via issue #638. Prior to this, the color of the event
 	// time was (unintentionally) customized via settings.colors.description. To maintain backwards compatibility
@@ -72,13 +73,17 @@ func NewSettingsFromYAML(name string, ymlConfig *config.Config, globalConfig *co
 	// user sets a value for colors.eventTime, it overrides the defaults.
 	//
 	// PS: We should have a deprecation plan for supporting this backwards compatibility feature.
-	settings.colors.eventTime = ymlConfig.UString("colors.eventTime", settings.colors.description)
+	settings.eventTime = ymlConfig.UString("colors.eventTime", settings.description)
 
-	settings.colors.highlights = ymlConfig.UList("colors.highlights")
-	settings.colors.past = ymlConfig.UString("colors.past", "gray")
-	settings.colors.title = ymlConfig.UString("colors.title", "white")
+	settings.highlights = ymlConfig.UList("colors.highlights")
+	settings.past = ymlConfig.UString("colors.past", "gray")
+	settings.title = ymlConfig.UString("colors.title", "white")
 
 	settings.SetDocumentationPath("google/gcal")
 
 	return &settings
+}
+
+func (widget *Widget) ConfigText() string {
+	return utils.HelpFromInterface(Settings{})
 }

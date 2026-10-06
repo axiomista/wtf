@@ -87,7 +87,7 @@ func (widget *Widget) content() (string, string, bool) {
 		}
 	}
 
-	title := fmt.Sprintf("Healthchecks (%d/%d)", numUp, len(widget.checks))
+	title := fmt.Sprintf("%v (%d/%d)", widget.CommonSettings().Title, numUp, len(widget.checks))
 
 	if widget.err != nil {
 		return title, widget.err.Error(), true
@@ -113,6 +113,8 @@ func (widget *Widget) contentFrom(checks []Checks) string {
 			prefix += "[green] + "
 		case "down":
 			prefix += "[red] - "
+		case "paused", "new":
+			prefix += "[lightgray] × "
 		default:
 			prefix += "[yellow] ~ "
 		}
@@ -170,7 +172,7 @@ func (widget *Widget) getExistingChecks() ([]Checks, error) {
 	}
 
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf(resp.Status)
+		return nil, fmt.Errorf("%s", resp.Status)
 	}
 
 	defer func() { _ = resp.Body.Close() }()

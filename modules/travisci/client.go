@@ -41,7 +41,8 @@ var (
 )
 
 func travisBuildRequest(settings *Settings) (*http.Response, error) {
-	var path string = "builds"
+
+	path := "builds"
 	if settings.baseURL != "" {
 		travisAPIURL.Path = "/api/"
 	}
@@ -70,7 +71,7 @@ func travisBuildRequest(settings *Settings) (*http.Response, error) {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, fmt.Errorf(resp.Status)
+		return nil, fmt.Errorf("%s", resp.Status)
 	}
 
 	return resp, nil
